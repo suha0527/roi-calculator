@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROI Calculator — Missed Call Revenue Recovery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0f1e;
+    --surface:   #111827;
+    --surface2:  #1a2333;
+    --border:    rgba(255,255,255,0.08);
+    --border2:   rgba(255,255,255,0.14);
+    --accent:    #3b82f6;
+    --accent2:   #60a5fa;
+    --green:     #22c55e;
+    --green-bg:  rgba(34,197,94,0.10);
+    --green-bdr: rgba(34,197,94,0.25);
+    --amber:     #f59e0b;
+    --amber-bg:  rgba(245,158,11,0.10);
+    --red:       #ef4444;
+    --red-bg:    rgba(239,68,68,0.10);
+    --red-bdr:   rgba(239,68,68,0.25);
+    --text:      #f1f5f9;
+    --text2:     #94a3b8;
+    --text3:     #64748b;
+    --serif:     'DM Serif Display', Georgia, serif;
+    --sans:      'DM Sans', system-ui, sans-serif;
+    --radius:    12px;
+    --radius-sm: 8px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Background grid pattern ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 5rem;
+  }
+
+  /* ── Header ── */
+  .header { text-align: center; margin-bottom: 3rem; animation: fadeUp 0.6s ease both; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(59,130,246,0.12);
+    border: 1px solid rgba(59,130,246,0.25);
+    border-radius: 999px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 1.25rem;
+  }
+
+  .badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent2);
+    border-radius: 50%;
+    animation: pulse 2s ease infinite;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent2);
+  }
+
+  .subtitle {
+    font-size: 15px;
+    color: var(--text2);
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+    margin-bottom: 1.25rem;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .card:nth-child(2) { animation-delay: 0.05s; }
+  .card:nth-child(3) { animation-delay: 0.10s; }
+  .card:nth-child(4) { animation-delay: 0.15s; }
+
+  .card-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 1.25rem;
+  }
+
+  /* ── Form fields ── */
+  .field { margin-bottom: 1.25rem; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 7px;
+  }
+
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-prefix {
+    position: absolute;
+    left: 14px;
+    font-size: 15px;
+    color: var(--text3);
+    pointer-events: none;
+    font-weight: 500;
+  }
+
+  .input-suffix {
+    position: absolute;
+    right: 14px;
+    font-size: 13px;
+    color: var(--text3);
+    pointer-events: none;
+  }
+
+  input[type="number"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 13px 42px 13px 38px;
+    font-size: 16px;
+    font-family: var(--sans);
+    font-weight: 500;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  input[type="number"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+  }
+
+  .field .hint {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 5px;
+  }
+
+  /* ── Slider ── */
+  .slider-wrap { margin-top: 10px; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    transition: transform 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  /* ── Button ── */
+  .btn-calc {
+    width: 100%;
+    padding: 15px;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 600;
+    font-family: var(--sans);
+    color: #fff;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-calc:hover {
+    background: #2563eb;
+    box-shadow: 0 8px 24px rgba(59,130,246,0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-calc:active { transform: scale(0.99) translateY(0); }
+
+  .btn-calc svg { transition: transform 0.2s; }
+  .btn-calc:hover svg { transform: translateX(3px); }
+
+  /* ── Results ── */
+  #results { display: none; }
+  #results.visible { display: block; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .results-header h2 {
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: var(--text);
+  }
+
+  .pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .pill-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-bdr); }
+  .pill-red   { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-bdr); }
+  .pill-amber { background: var(--amber-bg); color: var(--amber); }
+
+  /* ── Metric grid ── */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 1.25rem;
+  }
+
+  .metric-grid .metric-wide { grid-column: 1 / -1; }
+
+  .metric {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.1rem;
+  }
+
+  .metric-lbl {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+
+  .metric-val {
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric-val.c-red   { color: var(--red); }
+  .metric-val.c-green { color: var(--green); }
+  .metric-val.c-blue  { color: var(--accent2); }
+  .metric-val.c-amber { color: var(--amber); }
+
+  /* ── Breakdown table ── */
+  .breakdown {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+  }
+
+  .breakdown-title {
+    padding: 10px 16px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .brow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+
+  .brow:last-child { border-bottom: none; }
+  .brow:hover { background: rgba(255,255,255,0.02); }
+
+  .brow-label { color: var(--text2); }
+  .brow-val   { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+  .brow-val.pos { color: var(--green); }
+  .brow-val.neg { color: var(--red); }
+  .brow-val.big { font-size: 16px; }
+
+  /* ── Charge row ── */
+  .charge-section { margin-bottom: 1.25rem; }
+
+  .charge-section label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 7px;
+  }
+
+  .charge-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .charge-row .input-wrap { flex: 1; }
+
+  .btn-update {
+    padding: 13px 18px;
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--sans);
+    color: var(--text2);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .btn-update:hover {
+    background: var(--surface2);
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+
+  /* ── Verdict ── */
+  .verdict {
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 1.25rem;
+    border-left: 3px solid;
+  }
+
+  .verdict.great { background: var(--green-bg); color: #86efac; border-color: var(--green); }
+  .verdict.ok    { background: var(--amber-bg);  color: #fcd34d; border-color: var(--amber); }
+  .verdict.low   { background: var(--red-bg);    color: #fca5a5; border-color: var(--red); }
+
+  /* ── ROI display ── */
+  .roi-hero {
+    text-align: center;
+    padding: 1.75rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 1.25rem;
+  }
+
+  .roi-hero .roi-lbl {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+
+  .roi-hero .roi-num {
+    font-family: var(--serif);
+    font-size: clamp(3rem, 10vw, 5rem);
+    font-weight: 400;
+    line-height: 1;
+    color: var(--green);
+    margin-bottom: 4px;
+  }
+
+  .roi-hero .roi-sub {
+    font-size: 13px;
+    color: var(--text3);
+  }
+
+  /* ── Progress bar ── */
+  .progress-wrap { margin-top: 10px; }
+  .progress-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 0%;
+  }
+
+  /* ── Footer note ── */
+  .note {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  @keyframes countUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-in { animation: countUp 0.4s ease both; }
+
+  /* ── Responsive ── */
+  @media (max-width: 480px) {
+    .page { padding: 2rem 1rem 4rem; }
+    .card { padding: 1.25rem; }
+    .metric-grid { grid-template-columns: 1fr; }
+    .metric-grid .metric-wide { grid-column: 1; }
+    .charge-row { flex-direction: column; align-items: stretch; }
+    .btn-update { text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="badge">Revenue Recovery Tool</div>
+    <h1>How much are missed calls<br><em>really</em> costing you?</h1>
+    <p class="subtitle">Enter your business numbers below to instantly calculate your monthly and annual revenue loss — and your ROI on fixing it.</p>
+  </div>
+
+  <!-- Input Card -->
+  <div class="card">
+    <p class="card-label">Your business inputs</p>
+
+    <div class="field">
+      <label>Average client value</label>
+      <div class="input-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="clientVal" value="10500" min="0" placeholder="10500">
+      </div>
+      <div class="hint">The average revenue generated per new client or customer</div>
+    </div>
+
+    <div class="field">
+      <label>Missed calls per week — <span id="mc-display" style="color:var(--accent2);font-weight:600;">15</span></label>
+      <div class="input-wrap">
+        <span class="input-prefix" style="left:12px;">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <path d="M2 2.5A1.5 1.5 0 013.5 1h1a1.5 1.5 0 011.415 1L6.5 4a1.5 1.5 0 01-.44 1.28L5.2 6.14C5.9 7.55 7.45 9.1 8.86 9.8l.86-.86A1.5 1.5 0 0111 8.5l2 .585A1.5 1.5 0 0114 10.5v1A1.5 1.5 0 0112.5 13C6.701 13 2 8.299 2 2.5z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <input type="number" id="missedCalls" value="15" min="0" max="200" placeholder="15" style="padding-left:36px;" oninput="document.getElementById('mc-display').textContent=this.value||0; document.getElementById('mc-slider').value=this.value;">
+      </div>
+      <div class="slider-wrap">
+        <input type="range" id="mc-slider" min="0" max="200" step="1" value="15" oninput="document.getElementById('missedCalls').value=this.value; document.getElementById('mc-display').textContent=this.value;">
+      </div>
+      <div class="hint">Calls that go unanswered or unreturned each week</div>
+    </div>
+
+    <div class="field">
+      <label>Average close rate — <span id="cr-display" style="color:var(--accent2);font-weight:600;">20%</span></label>
+      <div class="input-wrap">
+        <input type="number" id="closeRate" value="20" min="0" max="100" placeholder="20" style="padding-left:14px;" oninput="document.getElementById('cr-display').textContent=(this.value||0)+'%'; document.getElementById('cr-slider').value=this.value;">
+        <span class="input-suffix">%</span>
+      </div>
+      <div class="slider-wrap">
+        <input type="range" id="cr-slider" min="0" max="100" step="1" value="20" oninput="document.getElementById('closeRate').value=this.value; document.getElementById('cr-display').textContent=this.value+'%';">
+      </div>
+      <div class="hint">Percentage of inbound leads you typically convert to paying clients</div>
+    </div>
+  </div>
+
+  <!-- Service Cost Card -->
+  <div class="card">
+    <p class="card-label">Service / solution cost</p>
+    <div class="field">
+      <label>Monthly cost of your fix ($)</label>
+      <div class="input-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="charge" value="500" min="0" placeholder="500">
+      </div>
+      <div class="hint">E.g. virtual receptionist, AI answering service, extra staff — monthly fee</div>
+    </div>
+  </div>
+
+  <!-- CTA Button -->
+  <button class="btn-calc" onclick="calculate()">
+    Calculate my ROI
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M3 8h10M9 4l4 4-4 4" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  <!-- Results -->
+  <div id="results">
+
+    <div style="height:1.75rem;"></div>
+
+    <div class="results-header">
+      <h2>Your results</h2>
+      <span class="pill pill-red" id="r-pill">High loss</span>
+    </div>
+
+    <!-- Key metrics -->
+    <div class="metric-grid">
+      <div class="metric">
+        <div class="metric-lbl">Monthly leads lost</div>
+        <div class="metric-val c-blue animate-in" id="r-leads">—</div>
+      </div>
+      <div class="metric">
+        <div class="metric-lbl">Clients lost / mo</div>
+        <div class="metric-val c-amber animate-in" id="r-clients">—</div>
+      </div>
+      <div class="metric metric-wide">
+        <div class="metric-lbl">Monthly revenue left on the table</div>
+        <div class="metric-val c-red animate-in" id="r-monthly">—</div>
+        <div class="progress-wrap">
+          <div class="progress-bar" style="margin-top:10px;">
+            <div class="progress-fill" id="r-bar" style="background:var(--red);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Annual breakdown -->
+    <div class="breakdown">
+      <div class="breakdown-title">Annual impact</div>
+      <div class="brow"><span class="brow-label">Annual revenue lost</span><span class="brow-val neg" id="r-annual">—</span></div>
+      <div class="brow"><span class="brow-label">Clients lost per year</span><span class="brow-val" id="r-annual-clients">—</span></div>
+      <div class="brow"><span class="brow-label">Cost per missed call</span><span class="brow-val neg" id="r-per-call">—</span></div>
+    </div>
+
+    <!-- ROI Hero -->
+    <div class="roi-hero">
+      <div class="roi-lbl">Return on investment</div>
+      <div class="roi-num" id="r-roi-big">—</div>
+      <div class="roi-sub" id="r-roi-sub">at your current service cost</div>
+    </div>
+
+    <!-- ROI Breakdown -->
+    <div class="breakdown">
+      <div class="breakdown-title">Monthly ROI breakdown</div>
+      <div class="brow"><span class="brow-label">Revenue you recover</span><span class="brow-val pos" id="r-recovered">—</span></div>
+      <div class="brow"><span class="brow-label">Monthly service cost</span><span class="brow-val" id="r-charge-out">—</span></div>
+      <div class="brow"><span class="brow-label">Net monthly gain</span><span class="brow-val big pos" id="r-net">—</span></div>
+    </div>
+
+    <!-- Update charge inline -->
+    <div class="charge-section">
+      <label>Adjust monthly service cost to recalculate</label>
+      <div class="charge-row">
+        <div class="input-wrap">
+          <span class="input-prefix">$</span>
+          <input type="number" id="charge2" value="500" min="0" placeholder="500">
+        </div>
+        <button class="btn-update" onclick="syncChargeAndRecalc()">Update ROI</button>
+      </div>
+    </div>
+
+    <!-- Verdict -->
+    <div id="verdict" class="verdict great"></div>
+
+    <!-- Note -->
+    <div class="note">
+      Calculations use 4.33 weeks/month. Results are estimates based on your inputs.<br>
+      Actual revenue recovery depends on call quality, lead fit, and sales execution.
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  var monthlyLost = 0;
+
+  function fmt(n) {
+    var abs = Math.abs(Math.round(n));
+    var s = '$' + abs.toLocaleString();
+    return n < 0 ? '-' + s : s;
+  }
+
+  function calculate() {
+    var cv = parseFloat(document.getElementById('clientVal').value) || 0;
+    var mc = parseFloat(document.getElementById('missedCalls').value) || 0;
+    var cr = parseFloat(document.getElementById('closeRate').value) || 0;
+
+    var weeksPerMonth = 4.33;
+    var monthlyLeads  = mc * weeksPerMonth;
+    var monthlyClients = monthlyLeads * (cr / 100);
+    monthlyLost = monthlyClients * cv;
+
+    var annualLost     = monthlyLost * 12;
+    var annualClients  = monthlyClients * 12;
+    var perCall        = (mc * weeksPerMonth) > 0 ? monthlyLost / (mc * weeksPerMonth) : 0;
+
+    document.getElementById('r-leads').textContent   = Math.round(monthlyLeads);
+    document.getElementById('r-clients').textContent = monthlyClients.toFixed(1);
+    document.getElementById('r-monthly').textContent = fmt(monthlyLost);
+    document.getElementById('r-annual').textContent  = fmt(annualLost);
+    document.getElementById('r-annual-clients').textContent = Math.round(annualClients);
+    document.getElementById('r-per-call').textContent = fmt(perCall);
+
+    var maxBar = 500000;
+    var pct = Math.min((monthlyLost / maxBar) * 100, 100);
+    document.getElementById('r-bar').style.width = pct + '%';
+
+    document.getElementById('charge2').value = document.getElementById('charge').value;
+
+    calcRoi();
+
+    var res = document.getElementById('results');
+    res.classList.add('visible');
+    setTimeout(function() {
+      res.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }
+
+  function syncChargeAndRecalc() {
+    document.getElementById('charge').value = document.getElementById('charge2').value;
+    calcRoi();
+  }
+
+  function calcRoi() {
+    var charge   = parseFloat(document.getElementById('charge2').value) || parseFloat(document.getElementById('charge').value) || 0;
+    var recovered = monthlyLost;
+    var net      = recovered - charge;
+    var roi      = charge > 0 ? ((net / charge) * 100) : 0;
+
+    document.getElementById('r-recovered').textContent  = fmt(recovered);
+    document.getElementById('r-charge-out').textContent = fmt(charge);
+    document.getElementById('r-net').textContent        = fmt(net);
+    document.getElementById('r-roi-big').textContent    = Math.round(roi) + '%';
+    document.getElementById('r-roi-sub').textContent    = 'return on your $' + Math.round(charge).toLocaleString() + '/mo investment';
+
+    var roiEl  = document.getElementById('r-roi-big');
+    var netEl  = document.getElementById('r-net');
+    var pillEl = document.getElementById('r-pill');
+    var vEl    = document.getElementById('verdict');
+
+    roiEl.className = 'roi-num ' + (roi >= 0 ? '' : '');
+    roiEl.style.color = roi >= 100 ? 'var(--green)' : roi >= 0 ? 'var(--amber)' : 'var(--red)';
+    netEl.className   = 'brow-val big ' + (net >= 0 ? 'pos' : 'neg');
+
+    if (roi >= 300) {
+      pillEl.className  = 'pill pill-green';
+      pillEl.textContent = 'Exceptional ROI';
+      vEl.className = 'verdict great';
+      vEl.textContent = 'Exceptional ROI — for every $1 you spend on the service, you recover ' + (Math.round(roi / 100)) + 'x in previously lost revenue. This solution pays for itself many times over every single month.';
+    } else if (roi >= 100) {
+      pillEl.className  = 'pill pill-green';
+      pillEl.textContent = 'Strong ROI';
+      vEl.className = 'verdict great';
+      vEl.textContent = 'Strong ROI — the service more than pays for itself. You net ' + fmt(net) + ' in recovered revenue each month after costs. At this rate, you recoup the annual cost in under 2 months.';
+    } else if (roi >= 0) {
+      pillEl.className  = 'pill pill-amber';
+      pillEl.textContent = 'Positive ROI';
+      vEl.className = 'verdict ok';
+      vEl.textContent = 'Positive ROI — you break even and capture some upside, but there is room to improve. Consider negotiating a lower service cost, or focus on improving your close rate to boost this figure significantly.';
+    } else {
+      pillEl.className  = 'pill pill-red';
+      pillEl.textContent = 'Negative ROI';
+      vEl.className = 'verdict low';
+      vEl.textContent = 'Negative ROI at current inputs — the service cost exceeds the modelled recovery. Try lowering the monthly charge or improving your close rate. Even a 5% improvement in close rate can dramatically change this outcome.';
+    }
+  }
+</script>
+</body>
+</html>
